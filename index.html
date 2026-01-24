@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vloerverwarming Installatie</title>
+    <title>Thermoduct Installatie</title>
     <style>
         * {
             margin: 0;
@@ -33,8 +33,9 @@
 
         h1 {
             color: #667eea;
-            font-size: 24px;
+            font-size: 28px;
             margin-bottom: 20px;
+            text-align: center;
         }
 
         h2 {
@@ -64,6 +65,7 @@
 
         .info-value {
             color: #333;
+            text-align: right;
         }
 
         .btn {
@@ -169,6 +171,12 @@
         .hidden {
             display: none;
         }
+
+        @media (max-width: 640px) {
+            .collector-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
     </style>
 </head>
 <body>
@@ -183,14 +191,12 @@
 
         <!-- Content -->
         <div id="content" class="hidden">
-            <!-- Task Info -->
+            <!-- Header -->
             <div class="card">
-                <h1>🏗️ Vloerverwarming Installatie</h1>
+                <h1>Thermoduct</h1>
+                <h2 style="text-align: center; color: #666; margin-bottom: 20px;" id="task-name">-</h2>
+                
                 <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Taak:</span>
-                        <span class="info-value" id="task-name">-</span>
-                    </div>
                     <div class="info-item">
                         <span class="info-label">Locatie:</span>
                         <span class="info-value" id="location">-</span>
@@ -202,9 +208,12 @@
                 </div>
 
                 <!-- Download Plan -->
-                <a href="#" id="plan-btn" class="btn" target="_blank">
-                    📄 Download Plan
-                </a>
+                <div id="plan-section">
+                    <h2>📄 Verlegschema</h2>
+                    <a href="#" id="plan-btn" class="btn" target="_blank">
+                        ⬇️ Download Verlegschema
+                    </a>
+                </div>
             </div>
 
             <!-- Upload Photos -->
@@ -287,24 +296,29 @@
 
         // Render task
         function renderTask() {
-            // Task naam
+            // Task naam (als titel)
             document.getElementById('task-name').textContent = taskData.task_name || '-';
             
-            // Locatie (project naam - TODO: dit moet aangepast worden naar een apart veld)
-            document.getElementById('location').textContent = taskData.project_name || '-';
+            // Locatie 
+            document.getElementById('location').textContent = taskData.location || taskData.project_name || '-';
             
-            // Datum (alleen dag, niet tijd)
-            const deadline = taskData.deadline && taskData.deadline !== 'Not set' 
-                ? new Date(taskData.deadline).toLocaleDateString('nl-NL')
-                : 'Niet ingesteld';
-            document.getElementById('date').textContent = deadline;
+            // Datum (alleen dag, zonder tijd)
+            let dateText = 'Niet ingesteld';
+            if (taskData.deadline && taskData.deadline !== 'Not set') {
+                // Als deadline format is "2026-01-27 16:00:00", haal alleen datum eruit
+                const datePart = taskData.deadline.split(' ')[0];  // "2026-01-27"
+                const dateObj = new Date(datePart);
+                dateText = dateObj.toLocaleDateString('nl-NL');  // "27-1-2026"
+            }
+            document.getElementById('date').textContent = dateText;
             
             // Plan button
             const planBtn = document.getElementById('plan-btn');
+            const planSection = document.getElementById('plan-section');
             if (taskData.plan_link) {
                 planBtn.href = taskData.plan_link;
             } else {
-                planBtn.style.display = 'none';
+                planSection.innerHTML = '<p style="color: #666; text-align: center;">Geen verlegschema beschikbaar</p>';
             }
 
             // Render collectors
@@ -347,6 +361,23 @@
         // File upload handlers
         uploadArea.onclick = () => fileInput.click();
         
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#667eea';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#ddd';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ddd';
+            selectedFiles = Array.from(e.dataTransfer.files);
+            renderFileList();
+            updateUploadButton();
+        });
+        
         fileInput.onchange = (e) => {
             selectedFiles = Array.from(e.target.files);
             renderFileList();
@@ -362,7 +393,7 @@
                 const item = document.createElement('div');
                 item.className = 'file-item';
                 item.innerHTML = `
-                    <span>${file.name}</span>
+                    <span>📎 ${file.name}</span>
                     <button onclick="removeFile(${i})" style="border: none; background: #ef4444; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer;">
                         Verwijder
                     </button>
