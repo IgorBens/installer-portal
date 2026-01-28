@@ -301,4 +301,57 @@
 
       const url = `${WEBHOOK_BASE}/task/${encodeURIComponent(id)}`;
       statusEl.textContent = `Fetching task ${id}…`;
-      out.textCont
+      out.textContent = "—";
+      renderPdfsSafe([]);
+
+      try {
+        const res = await fetch(url, {
+          method: "GET",
+          headers: { "Accept": "application/json" },
+          cache: "no-store",
+        });
+
+        const text = await res.text();
+
+        if (!text || text.trim().length === 0) {
+          statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span> (empty body)`;
+          out.textContent = "No content returned from webhook.";
+          renderPdfsSafe([]);
+          return;
+        }
+
+        let data = text;
+        try { data = JSON.parse(text); } catch {}
+
+        if (!res.ok) {
+          statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span> ${res.statusText}`;
+          out.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+          renderPdfsSafe([]);
+          return;
+        }
+
+        // Normalize payload (object vs array)
+        const payload =
+          Array.isArray(data) ? data[0] :
+          (data && Array.isArray(data.data)) ? data.data[0] :
+          data;
+
+        statusEl.textContent = `Success ✅ (HTTP ${res.status})`;
+
+        renderPdfsSafe(payload?.pdfs || []);
+        out.textContent = JSON.stringify(payload ?? data, null, 2);
+
+      } catch (err) {
+        statusEl.innerHTML = `<span class="error">Network error</span>`;
+        out.textContent = err.message;
+        renderPdfsSafe([]);
+      }
+    }
+
+    btn.addEventListener("click", fetchTask);
+    taskIdInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") fetchTask();
+    });
+  </script>
+</body>
+</html>
