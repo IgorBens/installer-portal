@@ -102,6 +102,25 @@
       margin-top: 18px;
     }
 
+    .status {
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: var(--muted);
+    }
+
+    .error {
+      color: #b00020;
+      font-weight: 700;
+    }
+
+    .section-title {
+      margin-top: 16px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
     pre {
       background: #0f172a;
       color: #e5e7eb;
@@ -111,20 +130,34 @@
       font-size: 13px;
       line-height: 1.5;
       border: 1px solid #1e293b;
+      margin: 0;
     }
 
-    .error {
-      color: #f87171;
+    /* PDF list cards */
+    .pdf-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-top: 8px;
+      background: #fff;
+    }
+
+    .pdf-name {
       font-weight: 600;
     }
 
-    .status {
-      font-size: 13px;
-      margin-bottom: 8px;
+    .pdf-meta {
+      font-size: 12px;
       color: var(--muted);
+      margin-top: 2px;
     }
   </style>
 </head>
+
 <body>
   <div class="app">
     <h1>🧩 Task Lookup</h1>
@@ -141,54 +174,143 @@
 
       <div class="output">
         <div id="status" class="status">Waiting for input…</div>
+
+        <div class="section-title">PDFs</div>
+        <div id="pdfs" class="hint">—</div>
+
+        <div class="section-title">Raw JSON</div>
         <pre id="out">—</pre>
       </div>
     </div>
   </div>
 
   <script>
+    // ✅ Put your n8n base webhook here (NO trailing slash)
     const WEBHOOK_BASE = "https://thermoduct.app.n8n.cloud/webhook/c3f563b3-c04f-4b01-820d-11173ba9bd31/thermoduct";
 
     const out = document.getElementById("out");
     const statusEl = document.getElementById("status");
     const taskIdInput = document.getElementById("taskId");
     const btn = document.getElementById("btn");
+    const pdfsEl = document.getElementById("pdfs");
+
+    // Store last response (useful for debugging)
+    window.lastTaskResponse = null;
+
+    function downloadPdfFromBase64(base64, filename) {
+      if (!base64) {
+        alert("No PDF data found.");
+        return;
+      }
+
+      // base64 is Odoo attachment "datas" (no data: prefix)
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+
+      const blob = new Blob([byteArray], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "file.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      URL.revokeObjectURL(url);
+    }
+
+    function renderPdfsSafe(pdfs) {
+      pdfsEl.innerHTML = "";
+
+      if (!pdfs || pdfs.length === 0) {
+        pdfsEl.className = "hint";
+        pdfsEl.textContent = "No PDFs.";
+        return;
+      }
+
+      pdfsEl.className = "";
+
+      pdfs.forEach((p, idx) => {
+        const row = document.createElement("div");
+        row.className = "pdf-row";
+
+        const left = document.createElement("div");
+        const name = p.name || `PDF ${idx + 1}`;
+        const mimetype = p.mimetype || "application/pdf";
+
+        left.innerHTML = `
+          <div class="pdf-name">${name}</div>
+          <div class="pdf-meta">${mimetype}</div>
+        `;
+
+        const btn = document.createElement("button");
+        btn.textContent = "Download";
+        btn.addEventListener("click", () => downloadPdfFromBase64(p.data, name));
+
+        row.appendChild(left);
+        row.appendChild(btn);
+        pdfsEl.appendChild(row);
+      });
+    }
 
     async function fetchTask() {
       const id = String(taskIdInput.value || "").trim();
       if (!id) {
         statusEl.textContent = "Please enter a task id.";
         out.textContent = "—";
+        renderPdfsSafe([]);
         return;
       }
 
       const url = `${WEBHOOK_BASE}/task/${encodeURIComponent(id)}`;
       statusEl.textContent = `Fetching task ${id}…`;
+      out.textContent = "—";
+      renderPdfsSafe([]);
 
       try {
         const res = await fetch(url, {
           method: "GET",
-          headers: { "Accept": "application/json" }
+          headers: { "Accept": "application/json" },
+          cache: "no-store",
         });
 
+        const contentType = res.headers.get("content-type") || "unknown";
         const text = await res.text();
-        let data;
-        try { data = JSON.parse(text); } catch { data = text; }
 
-        if (!res.ok) {
-          statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span>`;
-          out.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+        if (!text || text.trim().length === 0) {
+          statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span> (empty body, ${contentType})`;
+          out.textContent = "No content returned from webhook.";
+          renderPdfsSafe([]);
           return;
         }
 
-        statusEl.textContent = "Success ✅";
-        out.textContent = typeof data === "string"
-          ? data
-          : JSON.stringify(data, null, 2);
+        let data = text;
+        try { data = JSON.parse(text); } catch {}
+
+        if (!res.ok) {
+          statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span> ${res.statusText}`;
+          out.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+          renderPdfsSafe([]);
+          return;
+        }
+
+        // Success
+        statusEl.textContent = `Success ✅ (HTTP ${res.status})`;
+        window.lastTaskResponse = data;
+
+        // Render PDFs + raw JSON
+        renderPdfsSafe((data && data.pdfs) ? data.pdfs : []);
+        out.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
 
       } catch (err) {
         statusEl.innerHTML = `<span class="error">Network error</span>`;
         out.textContent = err.message;
+        renderPdfsSafe([]);
       }
     }
 
