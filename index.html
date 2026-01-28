@@ -4,48 +4,166 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Task Lookup</title>
+
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 16px; }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    input { padding: 10px; font-size: 16px; width: 220px; }
-    button { padding: 10px 14px; font-size: 16px; cursor: pointer; }
-    pre { margin-top: 16px; padding: 12px; background: #f6f8fa; overflow: auto; border-radius: 8px; }
-    .hint { color: #555; font-size: 14px; margin-top: 8px; }
-    .error { color: #b00020; }
+    :root {
+      --primary: #1a365d;
+      --accent: #e53e3e;
+      --bg: #f7fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --muted: #718096;
+      --radius: 12px;
+      --shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 900px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 16px;
+      color: var(--primary);
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    input {
+      flex: 1;
+      min-width: 200px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-size: 15px;
+      outline: none;
+      transition: border 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(26,54,93,0.1);
+    }
+
+    button {
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.05s, background 0.15s;
+    }
+
+    button:hover {
+      background: #12243f;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .output {
+      margin-top: 18px;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 16px;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      border: 1px solid #1e293b;
+    }
+
+    .error {
+      color: #f87171;
+      font-weight: 600;
+    }
+
+    .status {
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: var(--muted);
+    }
   </style>
 </head>
 <body>
-  <h2>Task lookup</h2>
+  <div class="app">
+    <h1>🧩 Task Lookup</h1>
 
-  <div class="row">
-    <input id="taskId" type="number" placeholder="Enter task id (e.g. 3369)" />
-    <button id="btn">Fetch</button>
+    <div class="card">
+      <div class="row">
+        <input id="taskId" type="number" placeholder="Enter task id (e.g. 3369)" />
+        <button id="btn">Fetch task</button>
+      </div>
+
+      <div class="hint">
+        Calls: <code>GET {WEBHOOK_BASE}/task/&lt;id&gt;</code>
+      </div>
+
+      <div class="output">
+        <div id="status" class="status">Waiting for input…</div>
+        <pre id="out">—</pre>
+      </div>
+    </div>
   </div>
-
-  <div class="hint">
-    This calls: <code>GET {WEBHOOK_BASE}/task/&lt;id&gt;</code>
-  </div>
-
-  <pre id="out">Enter a task id and click Fetch.</pre>
 
   <script>
-    // ✅ Put your n8n base webhook here (NO trailing slash)
     const WEBHOOK_BASE = "https://thermoduct.app.n8n.cloud/webhook/c3f563b3-c04f-4b01-820d-11173ba9bd31/thermoduct";
 
     const out = document.getElementById("out");
+    const statusEl = document.getElementById("status");
     const taskIdInput = document.getElementById("taskId");
     const btn = document.getElementById("btn");
 
     async function fetchTask() {
       const id = String(taskIdInput.value || "").trim();
       if (!id) {
-        out.textContent = "Please enter a task id.";
+        statusEl.textContent = "Please enter a task id.";
+        out.textContent = "—";
         return;
       }
 
       const url = `${WEBHOOK_BASE}/task/${encodeURIComponent(id)}`;
-
-      out.textContent = `Fetching...\n${url}`;
+      statusEl.textContent = `Fetching task ${id}…`;
 
       try {
         const res = await fetch(url, {
@@ -54,24 +172,23 @@
         });
 
         const text = await res.text();
-
-        // Try parse JSON (but still show something if it's not JSON)
         let data;
         try { data = JSON.parse(text); } catch { data = text; }
 
         if (!res.ok) {
-          out.innerHTML =
-            `<span class="error">HTTP ${res.status} ${res.statusText}</span>\n\n` +
-            (typeof data === "string" ? data : JSON.stringify(data, null, 2));
+          statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span>`;
+          out.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
           return;
         }
 
-        out.textContent = (typeof data === "string")
+        statusEl.textContent = "Success ✅";
+        out.textContent = typeof data === "string"
           ? data
           : JSON.stringify(data, null, 2);
 
       } catch (err) {
-        out.innerHTML = `<span class="error">Network error:</span>\n${err.message}`;
+        statusEl.innerHTML = `<span class="error">Network error</span>`;
+        out.textContent = err.message;
       }
     }
 
