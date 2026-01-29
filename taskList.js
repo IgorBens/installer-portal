@@ -6,10 +6,13 @@ let allTasks = [];
 const dateFilterEl = document.getElementById("dateFilter");
 const showPastDatesEl = document.getElementById("showPastDates");
 
-// Get today's date string (YYYY-MM-DD)
+// Get today's date string (YYYY-MM-DD) in local timezone
 function getTodayString() {
   const today = new Date();
-  return today.toISOString().split('T')[0];
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 // Check if a date is in the past (before today)
@@ -62,6 +65,8 @@ function populateDateFilter(tasks) {
   const showPast = showPastDatesEl.checked;
   const todayStr = getTodayString();
 
+  console.log("[taskList] Today is:", todayStr, "showPast:", showPast);
+
   const dates = new Set();
   tasks.forEach(t => {
     const d = getTaskDate(t);
@@ -72,6 +77,8 @@ function populateDateFilter(tasks) {
       }
     }
   });
+
+  console.log("[taskList] Filtered dates:", Array.from(dates).slice(0, 5));
 
   // Sort dates chronologically
   const sortedDates = Array.from(dates).sort();
