@@ -239,13 +239,19 @@ function renderMyTasks(tasks) {
     const row = document.createElement("div");
     row.className = "task-row";
 
+    // Handle both transformed and raw Odoo formats
+    const name = t.name || t.display_name || "Task";
+    const date = t.date || (t.date_deadline ? t.date_deadline.split(' ')[0] : "");
+    const project = t.project || (Array.isArray(t.project_id) ? t.project_id[1] : "") || "";
+    const address = t.address || (Array.isArray(t.x_studio_afleveradres) ? t.x_studio_afleveradres[1] : "") || "";
+
     const left = document.createElement("div");
     left.innerHTML = `
-      <div class="task-title">#${t.id} — ${t.name || "Task"}</div>
+      <div class="task-title">#${t.id} — ${name}</div>
       <div class="task-meta">
-        ${t.date || ""}
-        ${t.project ? " • " + t.project : ""}
-        ${t.address ? " • " + t.address : ""}
+        ${date}
+        ${project ? " • " + project : ""}
+        ${address ? " • " + address : ""}
       </div>
     `;
 
