@@ -111,7 +111,7 @@ async function fetchMyTasks() {
       return;
     }
 
-    // allow either array or {data:[...]}
+    // allow: array, {data:[...]}, or single task object
     let tasks;
     if (Array.isArray(data)) {
       tasks = data;
@@ -119,8 +119,12 @@ async function fetchMyTasks() {
     } else if (data && Array.isArray(data.data)) {
       tasks = data.data;
       console.log("[taskList] Data has .data array, using that");
+    } else if (data && typeof data === "object" && data.id !== undefined) {
+      // Single task object returned - wrap in array
+      console.log("[taskList] Data is single task object with id:", data.id);
+      tasks = [data];
     } else if (data && typeof data === "object") {
-      console.log("[taskList] Data is object but no array found. Keys:", Object.keys(data));
+      console.log("[taskList] Data is object but no array or id found. Keys:", Object.keys(data));
       tasks = [];
     } else {
       console.log("[taskList] Unexpected data format");
