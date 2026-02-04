@@ -47,7 +47,7 @@ function renderTaskDetail(task) {
   nameRow.className = "task-detail-name";
   nameRow.textContent = taskName;
   if (orderNumber) {
-    nameRow.textContent += ` \u2022 S${orderNumber}`;
+    nameRow.textContent += ` \u2022 ${orderNumber}`;
   }
   card.appendChild(nameRow);
 
