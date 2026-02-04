@@ -231,9 +231,37 @@ function renderMyTasks(tasks) {
     openBtn.textContent = "Open";
     openBtn.className = "secondary";
     openBtn.addEventListener("click", async () => {
+      // Render detail immediately from cached list data
       taskIdInput.value = t.id;
-      await fetchTask();
+      renderTaskDetail(t);
+      statusEl.textContent = "PDFs laden\u2026";
+      out.textContent = JSON.stringify(t, null, 2);
+      renderPdfsSafe([]);
       window.scrollTo({ top: 0, behavior: "smooth" });
+
+      // Only fetch the task via API to get PDFs
+      const {u, p} = getCreds();
+      if (!u || !p) return;
+      try {
+        const url = `${WEBHOOK_BASE}/task/${encodeURIComponent(t.id)}`;
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Accept": "application/json",
+            "Authorization": basicAuthHeader(u, p),
+          },
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const payload = Array.isArray(data) ? data[0] : (data?.data?.[0] || data);
+          renderPdfsSafe(payload?.pdfs || []);
+          statusEl.textContent = "Success";
+        }
+      } catch (err) {
+        console.error("[taskList] PDF fetch error:", err);
+        statusEl.textContent = "PDFs konden niet geladen worden.";
+      }
     });
 
     footer.appendChild(openBtn);
