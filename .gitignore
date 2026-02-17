@@ -2,7 +2,7 @@
 .env
 
 # Generated at container startup
-src/js/config.js
+src/js/core/config.js
 
 # OS
 .DS_Store

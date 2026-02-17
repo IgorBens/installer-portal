@@ -1,7 +1,31 @@
 // ===== TASK DETAIL VIEW =====
-// Renders the single-task detail card and its PDFs.
+// Single task view with PDFs and documents.
 
-const TaskDetail = (() => {
+const TaskDetailView = (() => {
+
+  const template = `
+    <button id="backToList" class="secondary" style="margin-bottom:12px">
+      &larr; Terug naar lijst
+    </button>
+    <div id="taskDetail"></div>
+    <div class="card">
+      <div class="section-title">PDFs</div>
+      <div id="pdfs" class="hint">&mdash;</div>
+    </div>
+    <div class="card">
+      <div class="section-title">Documenten</div>
+      <div id="docContainer" class="hint">Project gegevens laden...</div>
+    </div>
+  `;
+
+  function mount() {
+    document.getElementById("backToList").addEventListener("click", () => {
+      Router.showView("tasks");
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ── Render task detail card ──
 
   function render(task) {
     const el = document.getElementById("taskDetail");
@@ -16,7 +40,6 @@ const TaskDetail = (() => {
     const card = document.createElement("div");
     card.className = "task-detail";
 
-    // Project name
     if (task.project_name) {
       const proj = document.createElement("div");
       proj.className = "task-detail-project";
@@ -24,14 +47,12 @@ const TaskDetail = (() => {
       card.appendChild(proj);
     }
 
-    // Task name + order number
     const nameRow = document.createElement("div");
     nameRow.className = "task-detail-name";
     nameRow.textContent = task.name || task.display_name || "Task";
     if (task.order_number) nameRow.textContent += ` \u2022 ${task.order_number}`;
     card.appendChild(nameRow);
 
-    // Info grid
     const grid = document.createElement("div");
     grid.className = "task-detail-grid";
 
@@ -69,7 +90,6 @@ const TaskDetail = (() => {
 
     if (grid.children.length > 0) card.appendChild(grid);
 
-    // Description (HTML from Odoo)
     if (task.description) {
       const desc = document.createElement("div");
       desc.className = "task-detail-description";
@@ -89,6 +109,8 @@ const TaskDetail = (() => {
 
     el.appendChild(card);
   }
+
+  // ── Render PDFs ──
 
   function renderPdfs(pdfs) {
     const el = document.getElementById("pdfs");
@@ -141,6 +163,10 @@ const TaskDetail = (() => {
       el.appendChild(row);
     });
   }
+
+  // ── Register (no tab — accessed via task list, not nav) ──
+
+  Router.register("taskDetail", { template, mount });
 
   return { render, renderPdfs };
 })();

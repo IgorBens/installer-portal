@@ -1,9 +1,55 @@
-// ===== TASK LIST =====
-// Fetches and renders all tasks for the logged-in user.
-// Supports date filtering and "show past" toggle.
+// ===== TASKS VIEW =====
+// Task list with date filtering. Opens TaskDetailView on click.
 
 const TaskList = (() => {
   let allTasks = [];
+  // Cached filter state (survives mount/unmount when navigating to detail and back)
+  let savedDateFilter = "";
+  let savedShowPast   = false;
+
+  const template = `
+    <div class="card">
+      <div class="section-title">Taken</div>
+      <div class="filter-row">
+        <select id="dateFilter">
+          <option value="">Alle datums</option>
+        </select>
+        <label class="checkbox-label">
+          <input type="checkbox" id="showPastDates" /> Toon verleden
+        </label>
+      </div>
+      <div id="taskStatus" class="hint">&mdash;</div>
+      <div id="taskList"></div>
+    </div>
+  `;
+
+  // ── Mount / Unmount ──
+
+  function mount() {
+    // Restore filter state
+    document.getElementById("dateFilter").value = savedDateFilter;
+    document.getElementById("showPastDates").checked = savedShowPast;
+
+    // Bind filter events
+    document.getElementById("dateFilter").addEventListener("change", filterAndRender);
+    document.getElementById("showPastDates").addEventListener("change", () => {
+      populateDateFilter(allTasks);
+      filterAndRender();
+    });
+
+    if (allTasks.length > 0) {
+      // Returning from detail view — render from cache, no re-fetch
+      populateDateFilter(allTasks);
+      filterAndRender();
+    } else {
+      fetchTasks();
+    }
+  }
+
+  function unmount() {
+    savedDateFilter = document.getElementById("dateFilter")?.value || "";
+    savedShowPast   = document.getElementById("showPastDates")?.checked || false;
+  }
 
   // ── Date filter ──
 
@@ -18,6 +64,7 @@ const TaskList = (() => {
       if (d && (showPast || d >= todayStr)) dates.add(d);
     });
 
+    const prev = filterEl.value;
     filterEl.innerHTML = '<option value="">Alle datums</option>';
     Array.from(dates).sort().forEach(d => {
       const opt = document.createElement("option");
@@ -25,6 +72,7 @@ const TaskList = (() => {
       opt.textContent = formatDateLabel(d);
       filterEl.appendChild(opt);
     });
+    filterEl.value = prev;
   }
 
   function filterAndRender() {
@@ -67,7 +115,7 @@ const TaskList = (() => {
       const card = document.createElement("div");
       card.className = "task-card";
 
-      // ── Header ──
+      // Header
       const header = document.createElement("div");
       header.className = "task-card-header";
 
@@ -99,7 +147,7 @@ const TaskList = (() => {
 
       card.appendChild(header);
 
-      // ── Details (address, project leader) ──
+      // Details
       const details = document.createElement("div");
       details.className = "task-card-details";
 
@@ -130,7 +178,7 @@ const TaskList = (() => {
 
       if (details.children.length > 0) card.appendChild(details);
 
-      // ── Footer ──
+      // Footer
       const footer = document.createElement("div");
       footer.className = "task-card-footer";
 
@@ -149,12 +197,9 @@ const TaskList = (() => {
 
   async function openTask(task) {
     Router.showView("taskDetail");
-    TaskDetail.render(task);
-    TaskDetail.renderPdfs([]);
+    TaskDetailView.render(task);
+    TaskDetailView.renderPdfs([]);
     Documents.init(task);
-
-    document.getElementById("backToList").onclick = () => Router.showView("tasks");
-    window.scrollTo({ top: 0, behavior: "smooth" });
 
     // Fetch full task data (PDFs + project_id for documents)
     try {
@@ -162,62 +207,64 @@ const TaskList = (() => {
       if (res.ok) {
         const data = await res.json();
         const payload = Array.isArray(data) ? data[0] : (data?.data?.[0] || data);
-        TaskDetail.renderPdfs(payload?.pdfs || []);
+        TaskDetailView.renderPdfs(payload?.pdfs || []);
         if (payload?.project_id) Documents.setProjectId(payload.project_id);
       }
     } catch (err) {
-      console.error("[taskList] Detail fetch error:", err);
+      console.error("[tasks] Detail fetch error:", err);
     }
   }
 
-  // ── Public API ──
+  // ── Fetch tasks ──
 
-  return {
-    async fetch() {
-      const listEl   = document.getElementById("taskList");
-      const statusEl = document.getElementById("taskStatus");
+  async function fetchTasks() {
+    const listEl   = document.getElementById("taskList");
+    const statusEl = document.getElementById("taskStatus");
 
-      if (!Auth.isLoggedIn()) {
-        statusEl.textContent = "Log eerst in.";
+    if (!Auth.isLoggedIn()) {
+      statusEl.textContent = "Log eerst in.";
+      return;
+    }
+
+    statusEl.textContent = "Taken laden\u2026";
+    listEl.innerHTML = "";
+
+    try {
+      const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/tasks`);
+      const text = await res.text();
+
+      let data = [];
+      try { data = JSON.parse(text); } catch { /* empty */ }
+
+      if (!res.ok) {
+        statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span>`;
         return;
       }
 
-      statusEl.textContent = "Taken laden\u2026";
-      listEl.innerHTML = "";
+      let tasks;
+      if (Array.isArray(data)) tasks = data;
+      else if (data?.data && Array.isArray(data.data)) tasks = data.data;
+      else if (data?.id !== undefined) tasks = [data];
+      else tasks = [];
 
-      try {
-        const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/tasks`);
-        const text = await res.text();
+      allTasks = tasks;
+      populateDateFilter(tasks);
+      filterAndRender();
+    } catch (err) {
+      console.error("[tasks] Network error:", err);
+      statusEl.innerHTML = '<span class="error">Netwerkfout</span>';
+    }
+  }
 
-        let data = [];
-        try { data = JSON.parse(text); } catch { /* empty */ }
+  // ── Register view ──
 
-        if (!res.ok) {
-          statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span>`;
-          return;
-        }
+  Router.register("tasks", {
+    template,
+    mount,
+    unmount,
+    tab: { label: "Taken", roles: ["*"] },
+  });
 
-        let tasks;
-        if (Array.isArray(data)) tasks = data;
-        else if (data?.data && Array.isArray(data.data)) tasks = data.data;
-        else if (data?.id !== undefined) tasks = [data];
-        else tasks = [];
-
-        allTasks = tasks;
-        populateDateFilter(tasks);
-        filterAndRender();
-      } catch (err) {
-        console.error("[taskList] Network error:", err);
-        statusEl.innerHTML = '<span class="error">Netwerkfout</span>';
-      }
-    },
-
-    bindFilters() {
-      document.getElementById("dateFilter").addEventListener("change", filterAndRender);
-      document.getElementById("showPastDates").addEventListener("change", () => {
-        populateDateFilter(allTasks);
-        filterAndRender();
-      });
-    },
-  };
+  // Export for external use (e.g. Router could call fetch on refresh)
+  return { fetch: fetchTasks };
 })();

@@ -1,0 +1,76 @@
+/* ── App header ── */
+
+.app-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+#userInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.user-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.user-role {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #ebf8ff;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Nav tabs ── */
+
+#mainNav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--border);
+}
+
+.nav-tab {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  border-radius: 0;
+}
+
+.nav-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.nav-tab:hover {
+  color: var(--text);
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 600px) {
+  body {
+    padding: 16px 8px;
+  }
+
+  .app-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

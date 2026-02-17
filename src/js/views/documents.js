@@ -1,7 +1,9 @@
 // ===== DOCUMENTS (Folder Tree + Photo Upload) =====
 //
+// Component used within the taskDetail view.
 // Folder structure from n8n: Gebouw > Verdiep > Collector
-// Each collector can hold uploaded photos / files.
+//
+// Not a registered view — mounted inside taskDetail's #docContainer.
 
 const Documents = (() => {
   let projectId = null;
@@ -125,7 +127,7 @@ const Documents = (() => {
     return el;
   }
 
-  // ── Collapse/expand ──
+  // ── Collapse / expand ──
 
   function toggleSection(headerEl) {
     const body = headerEl.nextElementSibling;
@@ -313,7 +315,6 @@ const Documents = (() => {
   // ── Public API ──
 
   return {
-    // Called when a task detail is opened
     init(task) {
       projectId = null;
       Object.keys(cache).forEach(k => delete cache[k]);
@@ -321,7 +322,6 @@ const Documents = (() => {
       if (container) container.innerHTML = '<p class="hint">Project gegevens laden...</p>';
     },
 
-    // Called from TaskList after full task data is fetched (contains project_id)
     setProjectId(pid) {
       if (!pid) return;
       projectId = pid;
