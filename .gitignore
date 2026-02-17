@@ -1,0 +1,9 @@
+# Environment (contains secrets)
+.env
+
+# Generated at container startup
+src/js/config.js
+
+# OS
+.DS_Store
+Thumbs.db

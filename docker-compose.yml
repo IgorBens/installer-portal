@@ -1,0 +1,9 @@
+services:
+  portal:
+    build: .
+    container_name: thermoduct-portal
+    ports:
+      - "${APP_PORT:-8080}:80"
+    env_file:
+      - .env
+    restart: unless-stopped
