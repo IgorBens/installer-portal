@@ -35,7 +35,7 @@ const Api = (() => {
     if (res.status === 401) {
       Auth.clearSession();
       Router.showView("login");
-      throw new Error("Sessie verlopen — log opnieuw in");
+      throw new Error("Session expired — please log in again");
     }
 
     return res;

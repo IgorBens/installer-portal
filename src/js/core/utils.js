@@ -30,11 +30,11 @@ function formatDateLabel(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);
 
-  if (date.getTime() === yesterday.getTime()) return "Gisteren";
-  if (date.getTime() === today.getTime())     return "Vandaag";
-  if (date.getTime() === tomorrow.getTime())  return "Morgen";
+  if (date.getTime() === yesterday.getTime()) return "Yesterday";
+  if (date.getTime() === today.getTime())     return "Today";
+  if (date.getTime() === tomorrow.getTime())  return "Tomorrow";
 
-  return date.toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" });
+  return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
 // ── HTML helpers ──

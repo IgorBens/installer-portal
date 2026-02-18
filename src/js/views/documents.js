@@ -17,7 +17,7 @@ const Documents = (() => {
     container.innerHTML = "";
 
     if (!tree || tree.length === 0) {
-      container.innerHTML = '<p class="hint">Geen mappenstructuur gevonden.</p>';
+      container.innerHTML = '<p class="hint">No folder structure found.</p>';
       return;
     }
 
@@ -33,9 +33,9 @@ const Documents = (() => {
         <div class="doc-header-left">
           <span class="doc-chevron open">&#9654;</span>
           <span class="doc-folder-icon">&#127970;</span>
-          <strong>Gebouw ${escapeHtml(String(gebouw.name))}</strong>
+          <strong>Building ${escapeHtml(String(gebouw.name))}</strong>
         </div>
-        <span class="doc-count">${gebouw.verdiepen?.length || 0} verdiep(en)</span>`;
+        <span class="doc-count">${gebouw.verdiepen?.length || 0} floor(s)</span>`;
       header.addEventListener("click", () => toggleSection(header));
       el.appendChild(header);
 
@@ -45,7 +45,7 @@ const Documents = (() => {
       if (gebouw.verdiepen?.length > 0) {
         gebouw.verdiepen.forEach(v => body.appendChild(buildVerdiep(gebouw, v)));
       } else {
-        body.innerHTML = '<p class="hint" style="margin-left:16px">Geen verdiepen</p>';
+        body.innerHTML = '<p class="hint" style="margin-left:16px">No floors</p>';
       }
 
       el.appendChild(body);
@@ -63,9 +63,9 @@ const Documents = (() => {
       <div class="doc-header-left">
         <span class="doc-chevron open">&#9654;</span>
         <span class="doc-folder-icon">&#128205;</span>
-        <strong>Verdiep ${escapeHtml(String(verdiep.name))}</strong>
+        <strong>Floor ${escapeHtml(String(verdiep.name))}</strong>
       </div>
-      <span class="doc-count">${verdiep.collectoren?.length || 0} collector(en)</span>`;
+      <span class="doc-count">${verdiep.collectoren?.length || 0} collector(s)</span>`;
     header.addEventListener("click", () => toggleSection(header));
     el.appendChild(header);
 
@@ -75,7 +75,7 @@ const Documents = (() => {
     if (verdiep.collectoren?.length > 0) {
       verdiep.collectoren.forEach(c => body.appendChild(buildCollector(gebouw, verdiep, c)));
     } else {
-      body.innerHTML = '<p class="hint" style="margin-left:24px">Geen collectoren</p>';
+      body.innerHTML = '<p class="hint" style="margin-left:24px">No collectors</p>';
     }
 
     el.appendChild(body);
@@ -98,7 +98,7 @@ const Documents = (() => {
         <strong>${escapeHtml(String(collector.name))}</strong>
       </div>
       <div class="doc-header-right">
-        <button class="doc-upload-btn" title="Foto's uploaden">&#128247; Upload</button>
+        <button class="doc-upload-btn" title="Upload photos">&#128247; Upload</button>
       </div>`;
 
     header.querySelector(".doc-upload-btn").addEventListener("click", (e) => {
@@ -120,7 +120,7 @@ const Documents = (() => {
 
     const filesList = document.createElement("div");
     filesList.className = "doc-files-list";
-    filesList.innerHTML = '<p class="doc-loading" style="color:#868e96">Klik om bestanden te laden.</p>';
+    filesList.innerHTML = '<p class="doc-loading" style="color:#868e96">Click to load files.</p>';
     body.appendChild(filesList);
 
     el.appendChild(body);
@@ -140,7 +140,7 @@ const Documents = (() => {
 
   async function loadFiles(folderPath, listEl) {
     if (!projectId) return;
-    listEl.innerHTML = '<p class="doc-loading">Bestanden laden...</p>';
+    listEl.innerHTML = '<p class="doc-loading">Loading files...</p>';
 
     try {
       const res = await Api.get(CONFIG.WEBHOOK_FILES, {
@@ -150,7 +150,7 @@ const Documents = (() => {
       const data = await res.json();
 
       if (!data.success || !data.exists || !data.files?.length) {
-        listEl.innerHTML = '<p class="doc-loading" style="color:#868e96">Nog geen bestanden.</p>';
+        listEl.innerHTML = '<p class="doc-loading" style="color:#868e96">No files yet.</p>';
         cache[folderPath] = [];
         return;
       }
@@ -159,14 +159,14 @@ const Documents = (() => {
       renderFiles(folderPath, data.files, listEl);
     } catch (err) {
       console.error("[documents] Load error:", err);
-      listEl.innerHTML = '<p class="doc-loading" style="color:#868e96">Kan bestanden niet laden.</p>';
+      listEl.innerHTML = '<p class="doc-loading" style="color:#868e96">Could not load files.</p>';
     }
   }
 
   function renderFiles(folderPath, files, listEl) {
     listEl.innerHTML = "";
     if (!files?.length) {
-      listEl.innerHTML = '<p class="doc-loading" style="color:#868e96">Nog geen bestanden.</p>';
+      listEl.innerHTML = '<p class="doc-loading" style="color:#868e96">No files yet.</p>';
       return;
     }
 
@@ -208,7 +208,7 @@ const Documents = (() => {
       const delBtn = document.createElement("button");
       delBtn.className = "doc-file-delete";
       delBtn.innerHTML = "&#x1F5D1;";
-      delBtn.title = "Verwijder";
+      delBtn.title = "Delete";
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         deleteFile(folderPath, file.name, delBtn);
@@ -251,7 +251,7 @@ const Documents = (() => {
   // ── Delete ──
 
   async function deleteFile(folderPath, fileName, btnEl) {
-    if (!confirm(`"${fileName}" verwijderen?`)) return;
+    if (!confirm(`Delete "${fileName}"?`)) return;
     if (!projectId) return;
 
     btnEl.disabled = true;
@@ -273,7 +273,7 @@ const Documents = (() => {
         if (cache[folderPath]) {
           cache[folderPath] = cache[folderPath].filter(f => f.name !== fileName);
           if (cache[folderPath].length === 0 && filesList) {
-            filesList.innerHTML = '<p class="doc-loading" style="color:#868e96">Nog geen bestanden.</p>';
+            filesList.innerHTML = '<p class="doc-loading" style="color:#868e96">No files yet.</p>';
           }
         }
       } else {
@@ -293,7 +293,7 @@ const Documents = (() => {
     projectId = pid;
     const container = document.getElementById("docContainer");
     if (!container) return;
-    container.innerHTML = '<p class="hint">Mappen laden...</p>';
+    container.innerHTML = '<p class="hint">Loading folders...</p>';
 
     try {
       const res = await Api.get(CONFIG.WEBHOOK_FOLDERS, { project_id: pid });
@@ -302,13 +302,13 @@ const Documents = (() => {
       if (data.success && data.tree) {
         renderTree(data.tree);
       } else if (data.exists === false) {
-        container.innerHTML = '<p class="hint">Geen mappenstructuur gevonden.</p>';
+        container.innerHTML = '<p class="hint">No folder structure found.</p>';
       } else {
-        container.innerHTML = '<p class="hint">Kon mappen niet laden.</p>';
+        container.innerHTML = '<p class="hint">Could not load folders.</p>';
       }
     } catch (err) {
       console.error("[documents] Folder fetch error:", err);
-      container.innerHTML = '<p class="hint">Netwerkfout bij laden van mappen.</p>';
+      container.innerHTML = '<p class="hint">Network error loading folders.</p>';
     }
   }
 
@@ -319,7 +319,7 @@ const Documents = (() => {
       projectId = null;
       Object.keys(cache).forEach(k => delete cache[k]);
       const container = document.getElementById("docContainer");
-      if (container) container.innerHTML = '<p class="hint">Project gegevens laden...</p>';
+      if (container) container.innerHTML = '<p class="hint">Loading project data...</p>';
     },
 
     setProjectId(pid) {

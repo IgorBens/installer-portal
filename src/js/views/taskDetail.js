@@ -5,7 +5,7 @@ const TaskDetailView = (() => {
 
   const template = `
     <button id="backToList" class="secondary" style="margin-bottom:12px">
-      &larr; Terug naar lijst
+      &larr; Back to list
     </button>
     <div id="taskDetail"></div>
     <div class="card">
@@ -13,8 +13,8 @@ const TaskDetailView = (() => {
       <div id="pdfs" class="hint">&mdash;</div>
     </div>
     <div class="card">
-      <div class="section-title">Documenten</div>
-      <div id="docContainer" class="hint">Project gegevens laden...</div>
+      <div class="section-title">Documents</div>
+      <div id="docContainer" class="hint">Loading project data...</div>
     </div>
   `;
 
@@ -33,7 +33,7 @@ const TaskDetailView = (() => {
     el.innerHTML = "";
 
     if (!task || !task.id) {
-      el.innerHTML = '<div class="hint">Geen taak data.</div>';
+      el.innerHTML = '<div class="hint">No task data.</div>';
       return;
     }
 
@@ -64,7 +64,7 @@ const TaskDetailView = (() => {
     if (dateStr) {
       grid.innerHTML += `
         <div class="task-detail-item">
-          <span class="detail-label">Datum</span>
+          <span class="detail-label">Date</span>
           <span class="detail-value">${formatDateLabel(dateStr)}</span>
         </div>`;
     }
@@ -72,7 +72,7 @@ const TaskDetailView = (() => {
     if (task.project_leader) {
       grid.innerHTML += `
         <div class="task-detail-item">
-          <span class="detail-label">Projectleider</span>
+          <span class="detail-label">Project leader</span>
           <span class="detail-value">${escapeHtml(task.project_leader)}</span>
         </div>`;
     }
@@ -80,7 +80,7 @@ const TaskDetailView = (() => {
     if (task.address_name || task.address_full) {
       grid.innerHTML += `
         <div class="task-detail-item">
-          <span class="detail-label">Adres</span>
+          <span class="detail-label">Address</span>
           <span class="detail-value">
             ${task.address_name ? `<strong>${escapeHtml(task.address_name)}</strong>` : ""}
             ${task.address_full ? `<br>${escapeHtml(task.address_full)}` : ""}
@@ -96,7 +96,7 @@ const TaskDetailView = (() => {
 
       const label = document.createElement("div");
       label.className = "detail-label";
-      label.textContent = "Omschrijving";
+      label.textContent = "Description";
       desc.appendChild(label);
 
       const content = document.createElement("div");
@@ -119,7 +119,7 @@ const TaskDetailView = (() => {
 
     if (!pdfs || pdfs.length === 0) {
       el.className = "hint";
-      el.textContent = "Geen PDFs.";
+      el.textContent = "No PDFs.";
       return;
     }
 
@@ -148,7 +148,7 @@ const TaskDetailView = (() => {
       btns.style.cssText = "display:flex;gap:8px";
 
       const viewBtn = document.createElement("button");
-      viewBtn.textContent = "Bekijk";
+      viewBtn.textContent = "View";
       viewBtn.className = "secondary btn-sm";
       viewBtn.addEventListener("click", () => viewPdf(p.data));
       btns.appendChild(viewBtn);

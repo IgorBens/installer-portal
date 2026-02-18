@@ -9,13 +9,13 @@ const TaskList = (() => {
 
   const template = `
     <div class="card">
-      <div class="section-title">Taken</div>
+      <div class="section-title">Tasks</div>
       <div class="filter-row">
         <select id="dateFilter">
-          <option value="">Alle datums</option>
+          <option value="">All dates</option>
         </select>
         <label class="checkbox-label">
-          <input type="checkbox" id="showPastDates" /> Toon verleden
+          <input type="checkbox" id="showPastDates" /> Show past
         </label>
       </div>
       <div id="taskStatus" class="hint">&mdash;</div>
@@ -65,7 +65,7 @@ const TaskList = (() => {
     });
 
     const prev = filterEl.value;
-    filterEl.innerHTML = '<option value="">Alle datums</option>';
+    filterEl.innerHTML = '<option value="">All dates</option>';
     Array.from(dates).sort().forEach(d => {
       const opt = document.createElement("option");
       opt.value = d;
@@ -98,12 +98,12 @@ const TaskList = (() => {
     listEl.innerHTML = "";
 
     if (!tasks?.length) {
-      statusEl.textContent = "Geen taken gevonden.";
+      statusEl.textContent = "No tasks found.";
       return;
     }
 
     tasks.sort((a, b) => getTaskDate(a).localeCompare(getTaskDate(b)));
-    statusEl.textContent = `${tasks.length} ta${tasks.length === 1 ? "ak" : "ken"} gevonden.`;
+    statusEl.textContent = `${tasks.length} task${tasks.length === 1 ? "" : "s"} found.`;
 
     tasks.forEach(t => {
       const taskName    = t.name || t.display_name || "Task";
@@ -222,11 +222,11 @@ const TaskList = (() => {
     const statusEl = document.getElementById("taskStatus");
 
     if (!Auth.isAuthenticated()) {
-      statusEl.textContent = "Log eerst in.";
+      statusEl.textContent = "Please log in first.";
       return;
     }
 
-    statusEl.textContent = "Taken laden\u2026";
+    statusEl.textContent = "Loading tasks\u2026";
     listEl.innerHTML = "";
 
     try {
@@ -252,7 +252,7 @@ const TaskList = (() => {
       filterAndRender();
     } catch (err) {
       console.error("[tasks] Network error:", err);
-      statusEl.innerHTML = '<span class="error">Netwerkfout</span>';
+      statusEl.innerHTML = '<span class="error">Network error</span>';
     }
   }
 
@@ -262,7 +262,7 @@ const TaskList = (() => {
     template,
     mount,
     unmount,
-    tab: { label: "Taken", roles: ["*"] },
+    tab: { label: "Tasks", roles: ["*"] },
   });
 
   // Export for external use (e.g. Router could call fetch on refresh)

@@ -5,7 +5,7 @@
 //     template: `<div>...</div>`,      — HTML injected into #viewContainer
 //     mount()  { ... },                — called after HTML is injected (bind events, fetch data)
 //     unmount(){ ... },                — called before switching away (optional, save state)
-//     tab: { label: "Taken", roles: ["*"] }  — nav tab (optional, omit = no tab)
+//     tab: { label: "Tasks", roles: ["*"] }  — nav tab (optional, omit = no tab)
 //   });
 //
 // Adding a new view:
@@ -50,7 +50,7 @@ const Router = (() => {
 
     const logoutBtn = document.createElement("button");
     logoutBtn.className = "secondary btn-sm";
-    logoutBtn.textContent = "Uitloggen";
+    logoutBtn.textContent = "Logout";
     logoutBtn.addEventListener("click", () => Auth.logout());
     userInfo.appendChild(logoutBtn);
 

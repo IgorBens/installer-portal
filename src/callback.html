@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Inloggen...</title>
+  <title>Logging in...</title>
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/login.css" />
@@ -12,8 +12,8 @@
 
 <div class="app">
   <div class="login-wrapper">
-    <h1>Even geduld...</h1>
-    <p class="hint" id="callbackStatus">Bezig met inloggen...</p>
+    <h1>Please wait...</h1>
+    <p class="hint" id="callbackStatus">Logging in...</p>
   </div>
 </div>
 
@@ -23,7 +23,7 @@
 <script>
   Auth.handleCallback().catch(err => {
     document.getElementById("callbackStatus").textContent =
-      "Inloggen mislukt: " + (err.message || err);
+      "Login failed: " + (err.message || err);
   });
 </script>
 

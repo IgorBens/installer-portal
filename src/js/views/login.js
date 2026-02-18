@@ -8,9 +8,9 @@
       <h1 id="loginTitle"></h1>
       <div class="card">
         <p style="color:var(--muted);font-size:14px;margin:0 0 16px">
-          Log in om verder te gaan.
+          Log in to continue.
         </p>
-        <button id="loginBtn" class="btn-block">Inloggen</button>
+        <button id="loginBtn" class="btn-block">Log in</button>
         <div id="loginStatus" class="hint"></div>
       </div>
     </div>
@@ -21,12 +21,12 @@
 
     document.getElementById("loginBtn").addEventListener("click", async () => {
       const statusEl = document.getElementById("loginStatus");
-      statusEl.textContent = "Doorverwijzen naar login\u2026";
+      statusEl.textContent = "Redirecting to login\u2026";
 
       try {
         await Auth.login(); // redirects to Keycloak
       } catch (err) {
-        statusEl.textContent = "Kon niet verbinden met authenticatie server.";
+        statusEl.textContent = "Could not connect to authentication server.";
         console.error("[login]", err);
       }
     });
