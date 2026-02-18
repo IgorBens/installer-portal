@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Logging in...</title>
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/login.css" />
+</head>
+<body>
+
+<div class="app">
+  <div class="login-wrapper">
+    <h1>Please wait...</h1>
+    <p class="hint" id="callbackStatus">Logging in...</p>
+  </div>
+</div>
+
+<!-- Only need config + auth for the callback -->
+<script src="js/core/config.js"></script>
+<script src="js/core/auth.js"></script>
+<script>
+  Auth.handleCallback().catch(err => {
+    document.getElementById("callbackStatus").textContent =
+      "Login failed: " + (err.message || err);
+  });
+</script>
+
+</body>
+</html>

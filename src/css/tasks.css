@@ -1,0 +1,227 @@
+/* ── Task card (list view) ── */
+
+.task-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-top: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.task-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px 8px;
+}
+
+.task-card-title-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-card-project {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+
+.task-card-name {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.task-card-date {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #ebf8ff;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.task-card-date.today {
+  background: #f0fff4;
+  color: var(--success);
+}
+
+.task-card-date.past {
+  background: #fff5f5;
+  color: #c53030;
+}
+
+.task-card-details {
+  padding: 0 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-card-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.detail-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.task-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px 12px;
+}
+
+/* ── Task detail (single task view) ── */
+
+.task-detail {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.task-detail-project {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.task-detail-name {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.task-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.task-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+
+.detail-value {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* Description */
+
+.task-detail-description {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.detail-description-content {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.detail-description-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.detail-description-content td,
+.detail-description-content th {
+  border: 1px solid var(--border);
+  padding: 8px;
+  font-size: 13px;
+}
+
+.detail-description-content ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.detail-description-content li {
+  margin-bottom: 4px;
+}
+
+/* PDF section header row */
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.pdf-upload-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.pdf-upload-ok { color: var(--success); }
+.pdf-upload-err { color: #c53030; }
+
+/* PDF rows */
+
+.pdf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-top: 8px;
+  background: #fff;
+}
+
+.pdf-name { font-weight: 700; }
+
+.pdf-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Responsive */
+
+@media (max-width: 600px) {
+  .task-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .task-card-header {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .task-card-date {
+    align-self: flex-start;
+  }
+}

@@ -1,0 +1,19 @@
+.login-wrapper {
+  max-width: 400px;
+  margin: 60px auto 0;
+  text-align: center;
+}
+
+.login-wrapper h1 {
+  margin-bottom: 24px;
+}
+
+.login-wrapper .card {
+  text-align: left;
+}
+
+@media (max-width: 600px) {
+  .login-wrapper {
+    margin-top: 24px;
+  }
+}
