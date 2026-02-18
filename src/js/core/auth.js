@@ -184,13 +184,20 @@ const Auth = {
   },
 
   // ── getRoles() ──
-  // Returns realm roles from the access_token.
+  // Returns custom realm roles from the access_token.
+  // Filters out Keycloak's built-in roles (offline_access, uma_authorization, default-roles-*)
   // e.g. ["installer"] or ["admin", "installer"]
   getRoles() {
     const token = Storage.get("access_token");
     if (!token) return [];
     const payload = parseJwt(token);
-    return payload?.roles ?? [];
+    const allRoles = payload?.roles ?? [];
+    return allRoles.filter(r => {
+      const lower = r.toLowerCase();
+      return lower !== "offline_access"
+          && lower !== "uma_authorization"
+          && !lower.startsWith("default-roles-");
+    });
   },
 
   // ── hasRole() ──
