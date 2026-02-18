@@ -203,7 +203,7 @@ const TaskList = (() => {
 
     // Fetch full task data (PDFs + project_id for documents)
     try {
-      const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/task/${encodeURIComponent(task.id)}`);
+      const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/task`, { id: task.id });
       if (res.ok) {
         const data = await res.json();
         const payload = Array.isArray(data) ? data[0] : (data?.data?.[0] || data);
