@@ -4,8 +4,9 @@
 const TaskList = (() => {
   let allTasks = [];
   // Cached filter state (survives mount/unmount when navigating to detail and back)
-  let savedDateFilter = "";
-  let savedShowPast   = false;
+  let savedDateFilter    = "";
+  let savedLeaderFilter  = "";
+  let savedShowPast      = false;
 
   const template = `
     <div class="card">
@@ -16,6 +17,9 @@ const TaskList = (() => {
       <div class="filter-row">
         <select id="dateFilter">
           <option value="">All dates</option>
+        </select>
+        <select id="leaderFilter" style="display:none">
+          <option value="">All project leaders</option>
         </select>
         <label class="checkbox-label">
           <input type="checkbox" id="showPastDates" /> Show past
@@ -33,6 +37,13 @@ const TaskList = (() => {
     document.getElementById("dateFilter").value = savedDateFilter;
     document.getElementById("showPastDates").checked = savedShowPast;
 
+    // Show project leader filter for warehouse (and projectleider/admin — useful when seeing all tasks)
+    const leaderEl = document.getElementById("leaderFilter");
+    if (Auth.hasRole("warehouse") || Auth.hasRole("projectleider") || Auth.hasRole("admin")) {
+      leaderEl.style.display = "";
+      leaderEl.value = savedLeaderFilter;
+    }
+
     // Refresh button
     document.getElementById("tasksRefreshBtn").addEventListener("click", () => {
       allTasks = [];
@@ -41,6 +52,7 @@ const TaskList = (() => {
 
     // Bind filter events
     document.getElementById("dateFilter").addEventListener("change", filterAndRender);
+    document.getElementById("leaderFilter").addEventListener("change", filterAndRender);
     document.getElementById("showPastDates").addEventListener("change", () => {
       populateDateFilter(allTasks);
       filterAndRender();
@@ -49,6 +61,7 @@ const TaskList = (() => {
     if (allTasks.length > 0) {
       // Returning from detail view — render from cache, no re-fetch
       populateDateFilter(allTasks);
+      populateLeaderFilter(allTasks);
       filterAndRender();
     } else {
       fetchTasks();
@@ -56,8 +69,9 @@ const TaskList = (() => {
   }
 
   function unmount() {
-    savedDateFilter = document.getElementById("dateFilter")?.value || "";
-    savedShowPast   = document.getElementById("showPastDates")?.checked || false;
+    savedDateFilter   = document.getElementById("dateFilter")?.value || "";
+    savedLeaderFilter = document.getElementById("leaderFilter")?.value || "";
+    savedShowPast     = document.getElementById("showPastDates")?.checked || false;
   }
 
   // ── Date filter ──
@@ -84,16 +98,40 @@ const TaskList = (() => {
     filterEl.value = prev;
   }
 
+  function populateLeaderFilter(tasks) {
+    const filterEl = document.getElementById("leaderFilter");
+    if (filterEl.style.display === "none") return;
+
+    const leaders = new Set();
+    tasks.forEach(t => {
+      if (t.project_leader) leaders.add(t.project_leader);
+    });
+
+    const prev = filterEl.value;
+    filterEl.innerHTML = '<option value="">All project leaders</option>';
+    Array.from(leaders).sort().forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      filterEl.appendChild(opt);
+    });
+    filterEl.value = prev;
+  }
+
   function filterAndRender() {
     const selected = document.getElementById("dateFilter").value;
+    const leader   = document.getElementById("leaderFilter").value;
     const showPast = document.getElementById("showPastDates").checked;
     const todayStr = getTodayString();
 
     let filtered = allTasks;
     if (selected) {
-      filtered = allTasks.filter(t => getTaskDate(t) === selected);
+      filtered = filtered.filter(t => getTaskDate(t) === selected);
     } else if (!showPast) {
-      filtered = allTasks.filter(t => getTaskDate(t) >= todayStr);
+      filtered = filtered.filter(t => getTaskDate(t) >= todayStr);
+    }
+    if (leader) {
+      filtered = filtered.filter(t => t.project_leader === leader);
     }
 
     render(filtered);
@@ -285,6 +323,7 @@ const TaskList = (() => {
 
       allTasks = tasks;
       populateDateFilter(tasks);
+      populateLeaderFilter(tasks);
       filterAndRender();
     } catch (err) {
       console.error("[tasks] Network error:", err);
