@@ -228,7 +228,11 @@ const TaskDetailView = (() => {
         const tasks = Array.isArray(tasksData) ? tasksData
           : (tasksData?.data && Array.isArray(tasksData.data)) ? tasksData.data
           : [];
-        const fresh = tasks.find(t => t.id === currentTask.id);
+        // Match by id + date to avoid picking a different day's task
+        // for the same project (e.g. yesterday vs today)
+        const currentDate = getTaskDate(currentTask);
+        const fresh = tasks.find(t => t.id === currentTask.id && getTaskDate(t) === currentDate)
+          || tasks.find(t => t.id === currentTask.id);
         if (fresh) {
           currentTask = fresh;
           render(fresh);
