@@ -112,6 +112,14 @@ const TaskList = (() => {
         || (Array.isArray(t.x_studio_afleveradres) ? t.x_studio_afleveradres[1] : "")
         || t.address || "";
 
+      // Derive project name: explicit field, or parse from project_id[1]
+      let projectName = t.project_name || "";
+      if (!projectName && Array.isArray(t.project_id) && t.project_id[1]) {
+        const raw = t.project_id[1];
+        const sep = raw.indexOf(" - S");
+        projectName = sep > 0 ? raw.substring(0, sep) : raw;
+      }
+
       const card = document.createElement("div");
       card.className = "task-card";
 
@@ -122,10 +130,10 @@ const TaskList = (() => {
       const titleSection = document.createElement("div");
       titleSection.className = "task-card-title-section";
 
-      if (t.project_name) {
+      if (projectName) {
         const proj = document.createElement("div");
         proj.className = "task-card-project";
-        proj.textContent = t.project_name;
+        proj.textContent = projectName;
         titleSection.appendChild(proj);
       }
 
