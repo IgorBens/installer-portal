@@ -103,15 +103,34 @@ const TaskDetailView = (() => {
 
   // ── File handling & validation ──
 
-  function handlePdfFiles(files) {
-    files.forEach(file => {
+  async function handlePdfFiles(files) {
+    if (!currentProjectId) {
+      alert("No project linked — cannot upload.");
+      return;
+    }
+
+    const validFiles = files.filter(file => {
       const ext = file.name.split(".").pop().toLowerCase();
       if (ext !== "pdf" && file.type !== "application/pdf") {
         showUploadStatus(file.name, "error", "Not a PDF file");
-        return;
+        return false;
       }
-      uploadPdf(file);
+      return true;
     });
+
+    if (validFiles.length === 0) return;
+
+    // Upload all files and wait for every one to finish
+    const results = await Promise.allSettled(
+      validFiles.map(file => uploadPdf(file))
+    );
+
+    const anySuccess = results.some(r => r.status === "fulfilled" && r.value === true);
+
+    // Single refresh after all uploads complete (with a small delay for backend processing)
+    if (anySuccess) {
+      setTimeout(() => refreshPdfs(), 800);
+    }
   }
 
   function showUploadStatus(fileName, status, message) {
@@ -142,11 +161,6 @@ const TaskDetailView = (() => {
   }
 
   async function uploadPdf(file) {
-    if (!currentProjectId) {
-      alert("No project linked — cannot upload.");
-      return;
-    }
-
     const row = showUploadStatus(file.name, "uploading", "Uploading\u2026");
 
     try {
@@ -164,14 +178,16 @@ const TaskDetailView = (() => {
 
       if (res.ok && result.success !== false) {
         showUploadStatus(file.name, "success", "Uploaded!");
-        refreshPdfs();
+        return true;
       } else {
         showUploadStatus(file.name, "error", result.message || "Upload failed");
+        return false;
       }
     } catch (err) {
       console.error("[taskDetail] PDF upload error:", err);
       if (row) row.remove();
       showUploadStatus(file.name, "error", "Network error");
+      return false;
     }
   }
 
