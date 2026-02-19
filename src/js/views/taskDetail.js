@@ -208,11 +208,14 @@ const TaskDetailView = (() => {
     if (!currentProjectId) return;
     try {
       const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/task`, { id: currentProjectId });
-      if (res.ok) {
-        const data = await res.json();
-        const payload = Array.isArray(data) ? data[0] : (data?.data?.[0] || data);
-        renderPdfs(payload?.pdfs || []);
-      }
+      if (!res.ok) return;
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { return; }
+
+      const payload = Array.isArray(data) ? data[0] : (data?.data?.[0] || data);
+      renderPdfs(payload?.pdfs || []);
     } catch (err) {
       console.error("[taskDetail] PDF refresh error:", err);
     }
