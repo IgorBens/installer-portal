@@ -6,9 +6,12 @@ const TaskDetailView = (() => {
   let currentProjectId = null;
 
   const template = `
-    <button id="backToList" class="secondary" style="margin-bottom:12px">
-      &larr; Back to list
-    </button>
+    <div class="detail-top-row">
+      <button id="backToList" class="secondary">
+        &larr; Back to list
+      </button>
+      <button id="taskRefreshBtn" class="secondary btn-sm">Refresh</button>
+    </div>
     <div id="taskDetail"></div>
     <div class="card">
       <div class="section-title-row">
@@ -26,11 +29,16 @@ const TaskDetailView = (() => {
     </div>
   `;
 
+  let currentTask = null;
+
   function mount() {
     document.getElementById("backToList").addEventListener("click", () => {
       Router.showView("tasks");
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Task refresh button (re-fetches PDFs + docs)
+    document.getElementById("taskRefreshBtn").addEventListener("click", () => refreshTask());
 
     // PDF refresh button
     document.getElementById("pdfRefreshBtn").addEventListener("click", () => refreshPdfs());
@@ -208,6 +216,27 @@ const TaskDetailView = (() => {
     });
   }
 
+  async function refreshTask() {
+    if (!currentProjectId || !currentTask) return;
+
+    const btn = document.getElementById("taskRefreshBtn");
+    if (btn) { btn.disabled = true; btn.textContent = "Refreshing\u2026"; }
+
+    try {
+      setLoadingPdfs();
+      const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/task`, { id: currentProjectId });
+      if (res.ok) {
+        const data = await res.json();
+        const payload = Array.isArray(data) ? data[0] : (data?.data?.[0] || data);
+        renderPdfs(payload?.pdfs || []);
+      }
+    } catch (err) {
+      console.error("[taskDetail] Task refresh error:", err);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Refresh"; }
+    }
+  }
+
   async function refreshPdfs() {
     if (!currentProjectId) return;
 
@@ -234,9 +263,19 @@ const TaskDetailView = (() => {
     }
   }
 
+  // ── PDF loading state ──
+
+  function setLoadingPdfs() {
+    const el = document.getElementById("pdfs");
+    if (!el) return;
+    el.className = "hint";
+    el.textContent = "Loading PDFs\u2026";
+  }
+
   // ── Render task detail card ──
 
   function render(task) {
+    currentTask = task;
     const el = document.getElementById("taskDetail");
     if (!el) return;
     el.innerHTML = "";
@@ -383,5 +422,5 @@ const TaskDetailView = (() => {
 
   Router.register("taskDetail", { template, mount });
 
-  return { render, renderPdfs, setProjectId };
+  return { render, renderPdfs, setLoadingPdfs, setProjectId };
 })();

@@ -86,6 +86,15 @@
   padding: 8px 16px 12px;
 }
 
+/* ── Task detail top row (back + refresh) ── */
+
+.detail-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
 /* ── Task detail (single task view) ── */
 
 .task-detail {

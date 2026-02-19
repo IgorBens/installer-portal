@@ -9,7 +9,10 @@ const TaskList = (() => {
 
   const template = `
     <div class="card">
-      <div class="section-title">Tasks</div>
+      <div class="section-title-row">
+        <div class="section-title" style="margin-bottom:0">Tasks</div>
+        <button id="tasksRefreshBtn" class="secondary btn-sm">Refresh</button>
+      </div>
       <div class="filter-row">
         <select id="dateFilter">
           <option value="">All dates</option>
@@ -29,6 +32,12 @@ const TaskList = (() => {
     // Restore filter state
     document.getElementById("dateFilter").value = savedDateFilter;
     document.getElementById("showPastDates").checked = savedShowPast;
+
+    // Refresh button
+    document.getElementById("tasksRefreshBtn").addEventListener("click", () => {
+      allTasks = [];
+      fetchTasks();
+    });
 
     // Bind filter events
     document.getElementById("dateFilter").addEventListener("change", filterAndRender);
@@ -206,7 +215,7 @@ const TaskList = (() => {
   async function openTask(task) {
     Router.showView("taskDetail");
     TaskDetailView.render(task);
-    TaskDetailView.renderPdfs([]);
+    TaskDetailView.setLoadingPdfs();
     Documents.init(task);
 
     // project_id is already in the task list response
