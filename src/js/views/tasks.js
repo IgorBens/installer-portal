@@ -193,6 +193,19 @@ const TaskList = (() => {
         details.appendChild(leader);
       }
 
+      // Workers / installers planned on this task
+      const workers = t.workers || [];
+      if (workers.length > 0) {
+        const row = document.createElement("div");
+        row.className = "task-card-detail";
+        row.innerHTML = '<span class="detail-icon">&#128119;</span>';
+        const list = document.createElement("span");
+        list.className = "task-card-workers";
+        list.textContent = workers.join(", ");
+        row.appendChild(list);
+        details.appendChild(row);
+      }
+
       if (details.children.length > 0) card.appendChild(details);
 
       // Footer
