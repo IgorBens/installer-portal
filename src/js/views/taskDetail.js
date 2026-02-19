@@ -16,7 +16,6 @@ const TaskDetailView = (() => {
     <div class="card">
       <div class="section-title-row">
         <div class="section-title" style="margin-bottom:0">PDFs</div>
-        <button id="pdfRefreshBtn" class="secondary btn-sm">Refresh</button>
         <div id="pdfUploadArea"></div>
       </div>
       <div id="pdfDropzone"></div>
@@ -37,11 +36,8 @@ const TaskDetailView = (() => {
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    // Task refresh button (re-fetches PDFs + docs)
+    // Task refresh button (re-fetches task detail, PDFs + docs)
     document.getElementById("taskRefreshBtn").addEventListener("click", () => refreshTask());
-
-    // PDF refresh button
-    document.getElementById("pdfRefreshBtn").addEventListener("click", () => refreshPdfs());
 
     // Show dropzone only for project leaders
     if (Auth.hasRole("projectleider")) {
@@ -217,18 +213,36 @@ const TaskDetailView = (() => {
   }
 
   async function refreshTask() {
-    if (!currentProjectId || !currentTask) return;
+    if (!currentTask) return;
 
     const btn = document.getElementById("taskRefreshBtn");
     if (btn) { btn.disabled = true; btn.textContent = "Refreshing\u2026"; }
 
+    setLoadingPdfs();
+
     try {
-      setLoadingPdfs();
-      const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/task`, { id: currentProjectId });
-      if (res.ok) {
-        const data = await res.json();
-        const payload = Array.isArray(data) ? data[0] : (data?.data?.[0] || data);
-        renderPdfs(payload?.pdfs || []);
+      // Re-fetch task list to get fresh task data (description, dates, etc.)
+      const tasksRes = await Api.get(`${CONFIG.WEBHOOK_TASKS}/tasks`);
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        const tasks = Array.isArray(tasksData) ? tasksData
+          : (tasksData?.data && Array.isArray(tasksData.data)) ? tasksData.data
+          : [];
+        const fresh = tasks.find(t => t.id === currentTask.id);
+        if (fresh) {
+          currentTask = fresh;
+          render(fresh);
+        }
+      }
+
+      // Re-fetch PDFs + docs
+      if (currentProjectId) {
+        const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/task`, { id: currentProjectId });
+        if (res.ok) {
+          const data = await res.json();
+          const payload = Array.isArray(data) ? data[0] : (data?.data?.[0] || data);
+          renderPdfs(payload?.pdfs || []);
+        }
       }
     } catch (err) {
       console.error("[taskDetail] Task refresh error:", err);
@@ -240,26 +254,17 @@ const TaskDetailView = (() => {
   async function refreshPdfs() {
     if (!currentProjectId) return;
 
-    const btn = document.getElementById("pdfRefreshBtn");
-    if (btn) { btn.disabled = true; btn.textContent = "Refreshing\u2026"; }
-
     try {
       const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/task`, { id: currentProjectId });
       const text = await res.text();
-      console.log("[taskDetail] refreshPdfs status:", res.status, "body:", text.substring(0, 200));
 
       let data;
-      try { data = JSON.parse(text); } catch {
-        console.warn("[taskDetail] refreshPdfs: response is not JSON");
-        return;
-      }
+      try { data = JSON.parse(text); } catch { return; }
 
       const payload = Array.isArray(data) ? data[0] : (data?.data?.[0] || data);
       renderPdfs(payload?.pdfs || []);
     } catch (err) {
       console.error("[taskDetail] PDF refresh error:", err);
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = "Refresh"; }
     }
   }
 
