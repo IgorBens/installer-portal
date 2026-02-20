@@ -180,113 +180,174 @@ const TaskList = (() => {
     tasks.sort((a, b) => getTaskDate(a).localeCompare(getTaskDate(b)));
     statusEl.textContent = `${tasks.length} task${tasks.length === 1 ? "" : "s"} found.`;
 
+    // Warehouse role: group by worker, Hendrika tasks → "Easykit" at bottom
+    if (Auth.hasRole("warehouse")) {
+      renderWarehouseGrouped(tasks, listEl);
+      return;
+    }
+
+    tasks.forEach(t => listEl.appendChild(buildTaskCard(t)));
+  }
+
+  // ── Warehouse grouped render ──
+
+  function renderWarehouseGrouped(tasks, listEl) {
+    const easykitTasks = [];
+    const workerTasks  = []; // non-easykit
+
     tasks.forEach(t => {
-      const taskName    = t.name || t.display_name || "Task";
-      const dateStr     = getTaskDate(t);
-      const addressName = t.address_name
-        || (Array.isArray(t.x_studio_afleveradres) ? t.x_studio_afleveradres[1] : "")
-        || t.address || "";
-
-      // Derive project name: explicit field, or parse from project_id[1]
-      let projectName = t.project_name || "";
-      if (!projectName && Array.isArray(t.project_id) && t.project_id[1]) {
-        const raw = t.project_id[1];
-        const sep = raw.indexOf(" - S");
-        projectName = sep > 0 ? raw.substring(0, sep) : raw;
+      const leader = (t.project_leader || "").toLowerCase();
+      if (leader.includes("hendrika")) {
+        easykitTasks.push(t);
+      } else {
+        workerTasks.push(t);
       }
-
-      const card = document.createElement("div");
-      card.className = "task-card";
-
-      // Header
-      const header = document.createElement("div");
-      header.className = "task-card-header";
-
-      const titleSection = document.createElement("div");
-      titleSection.className = "task-card-title-section";
-
-      if (projectName) {
-        const proj = document.createElement("div");
-        proj.className = "task-card-project";
-        proj.textContent = projectName;
-        titleSection.appendChild(proj);
-      }
-
-      const nameEl = document.createElement("div");
-      nameEl.className = "task-card-name";
-      nameEl.textContent = taskName + (t.order_number ? ` \u2022 ${t.order_number}` : "");
-      titleSection.appendChild(nameEl);
-
-      header.appendChild(titleSection);
-
-      if (dateStr) {
-        const badge = document.createElement("span");
-        badge.className = "task-card-date";
-        if (dateStr === getTodayString()) badge.classList.add("today");
-        else if (isDateInPast(dateStr)) badge.classList.add("past");
-        badge.textContent = formatDateLabel(dateStr);
-        header.appendChild(badge);
-      }
-
-      card.appendChild(header);
-
-      // Details
-      const details = document.createElement("div");
-      details.className = "task-card-details";
-
-      if (addressName || t.address_full) {
-        const addr = document.createElement("div");
-        addr.className = "task-card-detail";
-        addr.innerHTML = '<span class="detail-icon">&#128205;</span>';
-        const text = document.createElement("span");
-        if (addressName) {
-          const b = document.createElement("strong");
-          b.textContent = addressName;
-          text.appendChild(b);
-        }
-        if (t.address_full) {
-          if (addressName) text.appendChild(document.createElement("br"));
-          text.appendChild(document.createTextNode(t.address_full));
-        }
-        addr.appendChild(text);
-        details.appendChild(addr);
-      }
-
-      if (t.project_leader) {
-        const leader = document.createElement("div");
-        leader.className = "task-card-detail";
-        leader.innerHTML = `<span class="detail-icon">&#128100;</span><span>${escapeHtml(t.project_leader)}</span>`;
-        details.appendChild(leader);
-      }
-
-      // Workers / installers planned on this task
-      const workers = t.workers || [];
-      if (workers.length > 0) {
-        const row = document.createElement("div");
-        row.className = "task-card-detail";
-        row.innerHTML = '<span class="detail-icon">&#128119;</span>';
-        const list = document.createElement("span");
-        list.className = "task-card-workers";
-        list.textContent = workers.join(", ");
-        row.appendChild(list);
-        details.appendChild(row);
-      }
-
-      if (details.children.length > 0) card.appendChild(details);
-
-      // Footer
-      const footer = document.createElement("div");
-      footer.className = "task-card-footer";
-
-      const openBtn = document.createElement("button");
-      openBtn.textContent = "Open";
-      openBtn.className = "secondary btn-sm";
-      openBtn.addEventListener("click", () => openTask(t));
-      footer.appendChild(openBtn);
-
-      card.appendChild(footer);
-      listEl.appendChild(card);
     });
+
+    // Group non-easykit tasks by worker name
+    const groups = new Map(); // worker name → [task, …]
+    workerTasks.forEach(t => {
+      const workers = t.workers || [];
+      if (workers.length === 0) {
+        // No workers assigned — put under "Unassigned"
+        if (!groups.has("Unassigned")) groups.set("Unassigned", []);
+        groups.get("Unassigned").push(t);
+      } else {
+        workers.forEach(w => {
+          if (!groups.has(w)) groups.set(w, []);
+          groups.get(w).push(t);
+        });
+      }
+    });
+
+    // Render worker groups (sorted alphabetically)
+    const sortedWorkers = Array.from(groups.keys()).sort();
+    sortedWorkers.forEach(worker => {
+      const header = document.createElement("div");
+      header.className = "task-group-header";
+      header.textContent = worker;
+      listEl.appendChild(header);
+
+      groups.get(worker).forEach(t => listEl.appendChild(buildTaskCard(t)));
+    });
+
+    // Render Easykit section at the bottom
+    if (easykitTasks.length > 0) {
+      const header = document.createElement("div");
+      header.className = "task-group-header task-group-header--easykit";
+      header.textContent = "Easykit";
+      listEl.appendChild(header);
+
+      easykitTasks.forEach(t => listEl.appendChild(buildTaskCard(t)));
+    }
+  }
+
+  // ── Build a single task card element ──
+
+  function buildTaskCard(t) {
+    const taskName    = t.name || t.display_name || "Task";
+    const dateStr     = getTaskDate(t);
+    const addressName = t.address_name
+      || (Array.isArray(t.x_studio_afleveradres) ? t.x_studio_afleveradres[1] : "")
+      || t.address || "";
+
+    let projectName = t.project_name || "";
+    if (!projectName && Array.isArray(t.project_id) && t.project_id[1]) {
+      const raw = t.project_id[1];
+      const sep = raw.indexOf(" - S");
+      projectName = sep > 0 ? raw.substring(0, sep) : raw;
+    }
+
+    const card = document.createElement("div");
+    card.className = "task-card";
+
+    // Header
+    const header = document.createElement("div");
+    header.className = "task-card-header";
+
+    const titleSection = document.createElement("div");
+    titleSection.className = "task-card-title-section";
+
+    if (projectName) {
+      const proj = document.createElement("div");
+      proj.className = "task-card-project";
+      proj.textContent = projectName;
+      titleSection.appendChild(proj);
+    }
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "task-card-name";
+    nameEl.textContent = taskName + (t.order_number ? ` \u2022 ${t.order_number}` : "");
+    titleSection.appendChild(nameEl);
+
+    header.appendChild(titleSection);
+
+    if (dateStr) {
+      const badge = document.createElement("span");
+      badge.className = "task-card-date";
+      if (dateStr === getTodayString()) badge.classList.add("today");
+      else if (isDateInPast(dateStr)) badge.classList.add("past");
+      badge.textContent = formatDateLabel(dateStr);
+      header.appendChild(badge);
+    }
+
+    card.appendChild(header);
+
+    // Details
+    const details = document.createElement("div");
+    details.className = "task-card-details";
+
+    if (addressName || t.address_full) {
+      const addr = document.createElement("div");
+      addr.className = "task-card-detail";
+      addr.innerHTML = '<span class="detail-icon">&#128205;</span>';
+      const text = document.createElement("span");
+      if (addressName) {
+        const b = document.createElement("strong");
+        b.textContent = addressName;
+        text.appendChild(b);
+      }
+      if (t.address_full) {
+        if (addressName) text.appendChild(document.createElement("br"));
+        text.appendChild(document.createTextNode(t.address_full));
+      }
+      addr.appendChild(text);
+      details.appendChild(addr);
+    }
+
+    if (t.project_leader) {
+      const leader = document.createElement("div");
+      leader.className = "task-card-detail";
+      leader.innerHTML = `<span class="detail-icon">&#128100;</span><span>${escapeHtml(t.project_leader)}</span>`;
+      details.appendChild(leader);
+    }
+
+    const workers = t.workers || [];
+    if (workers.length > 0) {
+      const row = document.createElement("div");
+      row.className = "task-card-detail";
+      row.innerHTML = '<span class="detail-icon">&#128119;</span>';
+      const list = document.createElement("span");
+      list.className = "task-card-workers";
+      list.textContent = workers.join(", ");
+      row.appendChild(list);
+      details.appendChild(row);
+    }
+
+    if (details.children.length > 0) card.appendChild(details);
+
+    // Footer
+    const footer = document.createElement("div");
+    footer.className = "task-card-footer";
+
+    const openBtn = document.createElement("button");
+    openBtn.textContent = "Open";
+    openBtn.className = "secondary btn-sm";
+    openBtn.addEventListener("click", () => openTask(t));
+    footer.appendChild(openBtn);
+
+    card.appendChild(footer);
+    return card;
   }
 
   // ── Open single task ──
