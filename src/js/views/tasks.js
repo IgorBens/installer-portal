@@ -1,12 +1,28 @@
 // ===== TASKS VIEW =====
 // Task list with date filtering. Opens TaskDetailView on click.
+//
+// Performance: Only loads today/tomorrow/day-after on mount.
+// Past tasks are fetched lazily when "Show past" is toggled on.
 
 const TaskList = (() => {
-  let allTasks = [];
+  let upcomingTasks = []; // today → day+2
+  let pastTasks     = []; // before today (lazy-loaded)
+  let pastLoaded    = false;
+
   // Cached filter state (survives mount/unmount when navigating to detail and back)
   let savedDateFilter    = "";
   let savedLeaderFilter  = "";
   let savedShowPast      = false;
+
+  // Combined task list for rendering & detail view
+  function getAllTasks() {
+    return pastLoaded ? [...upcomingTasks, ...pastTasks] : upcomingTasks;
+  }
+
+  // YYYY-MM-DD for a Date object
+  function toDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
 
   const template = `
     <div class="card">
@@ -44,27 +60,35 @@ const TaskList = (() => {
       leaderEl.value = savedLeaderFilter;
     }
 
-    // Refresh button
+    // Refresh button — clears both caches and re-fetches
     document.getElementById("tasksRefreshBtn").addEventListener("click", () => {
-      allTasks = [];
-      fetchTasks();
+      upcomingTasks = [];
+      pastTasks = [];
+      pastLoaded = false;
+      fetchUpcoming();
     });
 
     // Bind filter events
     document.getElementById("dateFilter").addEventListener("change", filterAndRender);
     document.getElementById("leaderFilter").addEventListener("change", filterAndRender);
-    document.getElementById("showPastDates").addEventListener("change", () => {
-      populateDateFilter(allTasks);
+    document.getElementById("showPastDates").addEventListener("change", async () => {
+      const showPast = document.getElementById("showPastDates").checked;
+      if (showPast && !pastLoaded) {
+        await fetchPast();
+      }
+      const all = getAllTasks();
+      populateDateFilter(all);
       filterAndRender();
     });
 
-    if (allTasks.length > 0) {
+    if (upcomingTasks.length > 0) {
       // Returning from detail view — render from cache, no re-fetch
-      populateDateFilter(allTasks);
-      populateLeaderFilter(allTasks);
+      const all = getAllTasks();
+      populateDateFilter(all);
+      populateLeaderFilter(all);
       filterAndRender();
     } else {
-      fetchTasks();
+      fetchUpcoming();
     }
   }
 
@@ -124,7 +148,7 @@ const TaskList = (() => {
     const showPast = document.getElementById("showPastDates").checked;
     const todayStr = getTodayString();
 
-    let filtered = allTasks;
+    let filtered = getAllTasks();
     if (selected) {
       filtered = filtered.filter(t => getTaskDate(t) === selected);
     } else if (!showPast) {
@@ -266,7 +290,7 @@ const TaskList = (() => {
   async function openTask(task) {
     Router.showView("taskDetail");
     TaskDetailView.render(task);
-    TaskDetailView.renderTeam(allTasks);
+    TaskDetailView.renderTeam(getAllTasks());
     TaskDetailView.setLoadingPdfs();
     Documents.init(task);
 
@@ -289,9 +313,20 @@ const TaskList = (() => {
     }
   }
 
-  // ── Fetch tasks ──
+  // ── Fetch helpers ──
 
-  async function fetchTasks() {
+  function parseTasks(text) {
+    let data = [];
+    try { data = JSON.parse(text); } catch { /* empty */ }
+    if (Array.isArray(data)) return data;
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    if (data?.id !== undefined) return [data];
+    return [];
+  }
+
+  // ── Fetch upcoming tasks (today → day+2) ──
+
+  async function fetchUpcoming() {
     const listEl   = document.getElementById("taskList");
     const statusEl = document.getElementById("taskStatus");
 
@@ -304,30 +339,59 @@ const TaskList = (() => {
     listEl.innerHTML = "";
 
     try {
-      const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/tasks`);
-      const text = await res.text();
+      const today = new Date();
+      const dayAfter = new Date(today);
+      dayAfter.setDate(today.getDate() + 2);
 
-      let data = [];
-      try { data = JSON.parse(text); } catch { /* empty */ }
+      const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/tasks`, {
+        from_date: toDateStr(today),
+        to_date:   toDateStr(dayAfter),
+      });
+      const text = await res.text();
 
       if (!res.ok) {
         statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span>`;
         return;
       }
 
-      let tasks;
-      if (Array.isArray(data)) tasks = data;
-      else if (data?.data && Array.isArray(data.data)) tasks = data.data;
-      else if (data?.id !== undefined) tasks = [data];
-      else tasks = [];
-
-      allTasks = tasks;
-      populateDateFilter(tasks);
-      populateLeaderFilter(tasks);
+      upcomingTasks = parseTasks(text);
+      const all = getAllTasks();
+      populateDateFilter(all);
+      populateLeaderFilter(all);
       filterAndRender();
     } catch (err) {
       console.error("[tasks] Network error:", err);
       statusEl.innerHTML = '<span class="error">Network error</span>';
+    }
+  }
+
+  // ── Fetch past tasks (before today) — called lazily ──
+
+  async function fetchPast() {
+    const statusEl = document.getElementById("taskStatus");
+    statusEl.textContent = "Loading past tasks\u2026";
+
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/tasks`, {
+        to_date: toDateStr(yesterday),
+      });
+      const text = await res.text();
+
+      if (!res.ok) {
+        console.warn("[tasks] Past tasks fetch failed:", res.status);
+        return;
+      }
+
+      pastTasks = parseTasks(text);
+      pastLoaded = true;
+
+      const all = getAllTasks();
+      populateLeaderFilter(all);
+    } catch (err) {
+      console.error("[tasks] Past tasks network error:", err);
     }
   }
 
@@ -341,5 +405,5 @@ const TaskList = (() => {
   });
 
   // Export for external use (e.g. Router could call fetch on refresh)
-  return { fetch: fetchTasks };
+  return { fetch: fetchUpcoming };
 })();
