@@ -17,4 +17,8 @@ BUILD_VER=$(date +%s)
 sed -i "s/\.css\"/\.css?v=${BUILD_VER}\"/g; s/\.js\"/\.js?v=${BUILD_VER}\"/g" "$HTML_ROOT/index.html"
 echo "[entrypoint] cache-bust v=${BUILD_VER} injected into index.html"
 
+# Inject build version into service worker so each deploy gets a fresh cache name.
+sed -i "s/__BUILD_VER__/${BUILD_VER}/g" "$HTML_ROOT/sw.js"
+echo "[entrypoint] SW cache version v=${BUILD_VER} injected into sw.js"
+
 exec nginx -g 'daemon off;'
