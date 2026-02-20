@@ -4,6 +4,10 @@
 // Sends `past_days` param to the API so n8n/Odoo only returns
 // tasks from (today - past_days) → (today + 3). Default is 0
 // (no past). User picks how far back via a dropdown.
+//
+// Performance: Uses stale-while-revalidate — cached tasks are shown
+// instantly from localStorage, then the API is called in the background.
+// If the response differs, the view silently re-renders.
 
 const TaskList = (() => {
   let allTasks = [];
@@ -12,6 +16,25 @@ const TaskList = (() => {
   let savedDateFilter    = "";
   let savedLeaderFilter  = "";
   let savedPastDays      = "0";
+
+  // ── localStorage cache helpers ──
+  const CACHE_KEY = "tasksCache";
+
+  function readCache(pastDays) {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const cache = JSON.parse(raw);
+      if (cache.pastDays !== pastDays) return null; // wrong scope
+      return cache.tasks || null;
+    } catch { return null; }
+  }
+
+  function writeCache(pastDays, tasks) {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ pastDays, tasks }));
+    } catch { /* quota exceeded — ignore */ }
+  }
 
   const template = `
     <div class="card">
@@ -52,9 +75,10 @@ const TaskList = (() => {
       leaderEl.value = savedLeaderFilter;
     }
 
-    // Refresh button
+    // Refresh button — clears cache so it's a true fresh load
     document.getElementById("tasksRefreshBtn").addEventListener("click", () => {
       allTasks = [];
+      try { localStorage.removeItem(CACHE_KEY); } catch { /* ok */ }
       fetchTasks();
     });
 
@@ -62,7 +86,8 @@ const TaskList = (() => {
     document.getElementById("dateFilter").addEventListener("change", filterAndRender);
     document.getElementById("leaderFilter").addEventListener("change", filterAndRender);
     document.getElementById("pastDaysFilter").addEventListener("change", () => {
-      // Re-fetch from API with new past_days value
+      // Different scope — clear in-memory tasks and re-fetch
+      // (localStorage cache is keyed by pastDays so stale data won't show)
       allTasks = [];
       fetchTasks();
     });
@@ -292,7 +317,7 @@ const TaskList = (() => {
     }
   }
 
-  // ── Fetch tasks ──
+  // ── Fetch tasks (stale-while-revalidate) ──
 
   async function fetchTasks() {
     const listEl   = document.getElementById("taskList");
@@ -304,11 +329,23 @@ const TaskList = (() => {
     }
 
     const pastDays = document.getElementById("pastDaysFilter")?.value || "0";
-    statusEl.textContent = pastDays === "0"
-      ? "Loading tasks\u2026"
-      : `Loading tasks (+ last ${pastDays} days)\u2026`;
-    listEl.innerHTML = "";
 
+    // 1) Show cached data instantly (if available for this pastDays scope)
+    const cached = readCache(pastDays);
+    if (cached && cached.length > 0) {
+      allTasks = cached;
+      populateDateFilter(cached);
+      populateLeaderFilter(cached);
+      filterAndRender();
+      statusEl.textContent = `${cached.length} task${cached.length === 1 ? "" : "s"} (updating\u2026)`;
+    } else {
+      statusEl.textContent = pastDays === "0"
+        ? "Loading tasks\u2026"
+        : `Loading tasks (+ last ${pastDays} days)\u2026`;
+      listEl.innerHTML = "";
+    }
+
+    // 2) Fetch fresh data in background
     try {
       const res = await Api.get(`${CONFIG.WEBHOOK_TASKS}/tasks`, {
         past_days: pastDays,
@@ -316,7 +353,7 @@ const TaskList = (() => {
       const text = await res.text();
 
       if (!res.ok) {
-        statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span>`;
+        if (!cached) statusEl.innerHTML = `<span class="error">HTTP ${res.status}</span>`;
         return;
       }
 
@@ -329,13 +366,23 @@ const TaskList = (() => {
       else if (data?.id !== undefined) tasks = [data];
       else tasks = [];
 
-      allTasks = tasks;
-      populateDateFilter(tasks);
-      populateLeaderFilter(tasks);
-      filterAndRender();
+      // 3) Only re-render if data actually changed
+      const fresh = JSON.stringify(tasks);
+      const stale = JSON.stringify(allTasks);
+      if (fresh !== stale) {
+        allTasks = tasks;
+        populateDateFilter(tasks);
+        populateLeaderFilter(tasks);
+        filterAndRender();
+      } else {
+        // Data unchanged — just clear the "updating…" hint
+        statusEl.textContent = `${tasks.length} task${tasks.length === 1 ? "" : "s"} found.`;
+      }
+
+      writeCache(pastDays, tasks);
     } catch (err) {
       console.error("[tasks] Network error:", err);
-      statusEl.innerHTML = '<span class="error">Network error</span>';
+      if (!cached) statusEl.innerHTML = '<span class="error">Network error</span>';
     }
   }
 
