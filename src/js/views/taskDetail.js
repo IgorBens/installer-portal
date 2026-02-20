@@ -226,7 +226,8 @@ const TaskDetailView = (() => {
 
     try {
       // Re-fetch task list to get fresh task data (description, dates, etc.)
-      const tasksRes = await Api.get(`${CONFIG.WEBHOOK_TASKS}/tasks`);
+      // past_days=0 keeps it scoped to upcoming only (task detail refresh)
+      const tasksRes = await Api.get(`${CONFIG.WEBHOOK_TASKS}/tasks`, { past_days: 0 });
       if (tasksRes.ok) {
         const tasksData = await tasksRes.json();
         const tasks = Array.isArray(tasksData) ? tasksData
